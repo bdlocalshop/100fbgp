@@ -1,0 +1,48 @@
+{
+  "manifest_version": 3,
+  "name": "Group Discovery & Posting Assistant",
+  "version": "1.0.0",
+  "description": "Assists with Facebook group discovery, post queue scheduling, and quota tracking.",
+  "permissions": [
+    "storage",
+    "alarms",
+    "notifications",
+    "activeTab",
+    "scripting",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://*.facebook.com/*"
+  ],
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "background": {
+    "service_worker": "background/service-worker.js"
+  },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "Group Assistant",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.facebook.com/*"
+      ],
+      "js": [
+        "utils/spin-syntax.js",
+        "utils/storage.js",
+        "content-scripts/dom-helpers.js",
+        "content-scripts/fb-scanner.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}

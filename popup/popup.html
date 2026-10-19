@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FB Group Assistant</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="brand">
+        <img src="../icons/icon-48.png" alt="Logo" class="brand-icon">
+        <div class="brand-text">
+          <h1>FB Group Assistant</h1>
+          <span class="version-tag">v1.0.0</span>
+        </div>
+      </div>
+      <div class="status-container">
+        <span id="queue-status-badge" class="badge badge-idle">IDLE</span>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs">
+      <button class="tab-btn active" data-tab="tab-dashboard">Dashboard</button>
+      <button class="tab-btn" data-tab="tab-campaign">Campaign</button>
+      <button class="tab-btn" data-tab="tab-groups">Groups <span id="group-count-badge" class="badge-mini">0</span></button>
+      <button class="tab-btn" data-tab="tab-settings">Settings</button>
+      <button class="tab-btn" data-tab="tab-logs">Logs</button>
+    </nav>
+
+    <!-- Main Content Panels -->
+    <main class="tab-content">
+      <!-- 1. DASHBOARD TAB -->
+      <section id="tab-dashboard" class="tab-pane active">
+        <!-- Master Queue Controls -->
+        <div class="card control-card">
+          <div class="control-buttons">
+            <button id="btn-start" class="btn btn-primary">
+              <span class="btn-icon">▶</span> Start Queue
+            </button>
+            <button id="btn-pause" class="btn btn-secondary">
+              <span class="btn-icon">⏸</span> Pause
+            </button>
+            <button id="btn-stop" class="btn btn-danger">
+              <span class="btn-icon">⏹</span> Stop
+            </button>
+          </div>
+          <div id="countdown-banner" class="countdown-bar hidden">
+            <span>Next Action: <strong id="next-action-label">--</strong> in <strong id="countdown-timer">--</strong></span>
+          </div>
+        </div>
+
+        <!-- Safety Alert Banner (if tripped) -->
+        <div id="safety-alert-banner" class="alert-box alert-danger hidden">
+          <div class="alert-content">
+            <strong>⚠ Circuit Breaker Triggered:</strong>
+            <span id="safety-alert-text">Suspicious activity or checkpoint detected. Automation is halted for account safety.</span>
+          </div>
+          <button id="btn-clear-safety" class="btn btn-sm btn-outline-danger">Dismiss & Reset Safety</button>
+        </div>
+
+        <!-- Today's Quota Metrics -->
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <div class="metric-header">
+              <span class="metric-title">Posts Completed Today</span>
+              <span id="metric-posts-text" class="metric-value">0 / 10</span>
+            </div>
+            <div class="progress-bar-bg">
+              <div id="posts-progress-fill" class="progress-bar-fill" style="width: 0%;"></div>
+            </div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-header">
+              <span class="metric-title">Searches Conducted Today</span>
+              <span id="metric-searches-text" class="metric-value">0 / 20</span>
+            </div>
+            <div class="progress-bar-bg">
+              <div id="searches-progress-fill" class="progress-bar-fill" style="width: 0%;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Active Info Banner -->
+        <div class="card info-card">
+          <div class="info-row">
+            <span class="info-label">Active Keyword:</span>
+            <strong id="dashboard-active-keyword">--</strong>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Automation Mode:</span>
+            <span id="dashboard-mode" class="badge-subtle">Discover & Post</span>
+          </div>
+        </div>
+
+        <!-- Manual Instant Actions -->
+        <div class="section-title">Manual Actions (Active Tab)</div>
+        <div class="manual-actions-grid">
+          <button id="btn-manual-discover" class="btn btn-outline">
+            🔍 Scan Groups on Active Tab
+          </button>
+          <button id="btn-manual-post" class="btn btn-outline">
+            ✍ Post to Current Group Tab
+          </button>
+        </div>
+      </section>
+
+      <!-- 2. CAMPAIGN & TEMPLATES TAB -->
+      <section id="tab-campaign" class="tab-pane">
+        <!-- Keywords Pool -->
+        <div class="card">
+          <h3>Keyword Rotation Pool</h3>
+          <p class="card-desc">Keywords searched automatically during group discovery cycles.</p>
+          <div class="input-with-button">
+            <input type="text" id="input-new-keyword" placeholder="e.g. ecommerce owners">
+            <button id="btn-add-keyword" class="btn btn-primary">Add</button>
+          </div>
+          <ul id="keywords-list" class="tag-list"></ul>
+        </div>
+
+        <!-- Post Content & Spin-Syntax -->
+        <div class="card">
+          <h3>Post Templates & Spin-Syntax</h3>
+          <p class="card-desc">Supports dynamic spintax formatting like <code>{Hello|Hi|Greetings} fellow members!</code></p>
+          <div class="template-form">
+            <textarea id="textarea-new-template" rows="3" placeholder="Enter post template with {option1|option2}..."></textarea>
+            <div class="template-actions">
+              <button id="btn-add-template" class="btn btn-primary btn-sm">Add Template</button>
+              <button id="btn-test-spintax" class="btn btn-secondary btn-sm">Preview Variations</button>
+            </div>
+          </div>
+
+          <!-- Spintax Previews Box -->
+          <div id="spintax-preview-box" class="preview-box hidden">
+            <h4>Live Spintax Previews:</h4>
+            <div id="spintax-previews-list"></div>
+          </div>
+
+          <div class="section-subtitle">Saved Templates:</div>
+          <div id="templates-list" class="templates-container"></div>
+        </div>
+      </section>
+
+      <!-- 3. DISCOVERED GROUPS TAB -->
+      <section id="tab-groups" class="tab-pane">
+        <div class="groups-toolbar">
+          <input type="text" id="input-search-groups" placeholder="Search saved groups..." class="search-input">
+          <select id="select-filter-groups" class="select-input">
+            <option value="all">All Groups</option>
+            <option value="auto_approved">Auto-Approved</option>
+            <option value="requires_review">Requires Review</option>
+            <option value="blacklisted">Blacklisted</option>
+          </select>
+        </div>
+
+        <div class="toolbar-actions">
+          <button id="btn-export-groups" class="btn btn-sm btn-outline">Export JSON</button>
+          <button id="btn-clear-groups" class="btn btn-sm btn-outline-danger">Clear All</button>
+        </div>
+
+        <!-- Groups List -->
+        <div id="groups-container" class="groups-container">
+          <div class="empty-state">No groups discovered yet. Run a discovery search or start the queue.</div>
+        </div>
+      </section>
+
+      <!-- 4. SETTINGS & SAFETY TAB -->
+      <section id="tab-settings" class="tab-pane">
+        <div class="card">
+          <h3>Daily Quotas & Safety Controls</h3>
+          
+          <div class="form-group">
+            <label for="setting-max-posts">Max Posts Daily:</label>
+            <input type="number" id="setting-max-posts" min="1" max="50" value="10">
+            <small>Default recommended limit: 10 posts/day to preserve account safety.</small>
+          </div>
+
+          <div class="form-group">
+            <label for="setting-max-searches">Max Searches Daily:</label>
+            <input type="number" id="setting-max-searches" min="1" max="100" value="20">
+          </div>
+
+          <div class="form-row">
+            <div class="form-group half">
+              <label for="setting-min-delay">Min Delay (sec):</label>
+              <input type="number" id="setting-min-delay" min="15" max="3600" value="60">
+            </div>
+            <div class="form-group half">
+              <label for="setting-max-delay">Max Delay (sec):</label>
+              <input type="number" id="setting-max-delay" min="30" max="7200" value="180">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="setting-automation-mode">Automation Mode:</label>
+            <select id="setting-automation-mode">
+              <option value="all">Discover Groups & Post (Full Cycle)</option>
+              <option value="discover_only">Discover Only</option>
+              <option value="post_only">Post to Discovered Only</option>
+            </select>
+          </div>
+
+          <button id="btn-save-settings" class="btn btn-primary">Save Settings</button>
+        </div>
+
+        <div class="card danger-zone">
+          <h3>Reset Counters</h3>
+          <p class="card-desc">Reset today's recorded searches and posts counters.</p>
+          <button id="btn-reset-usage" class="btn btn-outline-danger btn-sm">Reset Today's Quota Counters</button>
+        </div>
+      </section>
+
+      <!-- 5. OPERATIONAL LOGS TAB -->
+      <section id="tab-logs" class="tab-pane">
+        <div class="logs-toolbar">
+          <select id="select-log-filter" class="select-input">
+            <option value="all">All Levels</option>
+            <option value="info">Info</option>
+            <option value="success">Success</option>
+            <option value="warn">Warnings</option>
+            <option value="error">Errors</option>
+          </select>
+          <button id="btn-clear-logs" class="btn btn-sm btn-outline">Clear Logs</button>
+        </div>
+        <div id="logs-container" class="logs-container">
+          <div class="empty-state">No logs recorded.</div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Toast Notification Overlay -->
+    <div id="toast-container" class="toast-container"></div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="../utils/spin-syntax.js"></script>
+  <script src="../utils/storage.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
